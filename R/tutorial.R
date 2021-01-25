@@ -1,0 +1,170 @@
+setwd("~/proj/multimodal/scMM")
+source("R/fun.R")
+
+library(data.table)
+library(ggplot2)
+library(Matrix)
+library(umap)
+library(Rphenograph)
+
+data_path <- "data/BMNC" #Path to data
+
+base_path <- "experiments/rna_protein/"
+runPath <- "2021-01-25T05_21_13.505149xsav_onr" 
+runPath <- gsub("/",":",runPath)
+runPath <- paste0(base_path,runPath)
+runPath #Path to scMM outputs
+
+#Unimodal latent variables for training data.
+train_r <- as.matrix(fread(file=paste0(runPath,"/lat_train_rna.csv"),
+                           sep=",",header=TRUE,drop="V1"))
+train_p <- as.matrix(fread(file=paste0(runPath,"/lat_train_protein.csv"),
+                           sep=",",header=TRUE,drop="V1"))
+
+#Unimodal latent varibles for test data.
+test_r <- as.matrix(fread(file=paste0(runPath,"/lat_test_rna.csv"),
+                          sep=",",header=TRUE,drop="V1"))
+test_p <- as.matrix(fread(file=paste0(runPath,"/lat_test_protein.csv"),
+                          sep=",",header=TRUE,drop="V1"))
+
+#Multimodal latent variables for training data.
+train_m <- as.matrix(fread(file=paste0(runPath,"/lat_train_mean.csv"),
+                           sep=",",header=TRUE,drop="V1"))
+#Multimodal latent variables for test data.
+test_m <- as.matrix(fread(file=paste0(runPath,"/lat_test_mean.csv"),
+                          sep=",",header=TRUE,drop="V1"))
+
+#Clustring by Rphenograph
+phenog <- Rphenograph(rbind(train_m, test_m), k=20)
+cluster <- phenog[[2]]$membership
+
+#UMAP visualization of multimodal latent variables
+umap <- umap(rbind(train_m, test_m), method="naive")
+
+#Plot UMAP enbedding
+color <- gg_color_hue(length(unique(cluster)))
+gg_embcluster <- PlotEmbCluster(umap$layout,cluster)
+
+#Visualize latent value for the dimension of interest.
+gg_selectdim <- PlotEmbSelectDim(umap$layout,rbind(train_m,test_m), dim=1)
+
+#Plot
+gridExtra::grid.arrange(gg_embcluster, gg_selectdim, nrow=1)
+
+
+
+#Traverse latent dimensions
+#RNA
+gene <- as.matrix(fread(file=paste0(data_path, "/RNA-seq/gene.tsv"),
+                        header=FALSE,sep="\t"))[,1]
+
+traverse <- as.matrix(fread(file=paste0(runPath,"/traverse/traverse_dim",1,".csv"),
+                            sep=",",header=TRUE,drop="V1"))
+
+cor_up_g <- cor_down_g <- gene_up <- gene_down <- list()
+
+latent_dim <- 10 #Number of latent dimensions
+for(i in 1:latent_dim){
+  traverse <- as.matrix(fread(file=paste0(runPath,"/traverse/traverse_dim",i,".csv"),
+                              sep=",",header=TRUE,drop="V1"))
+  traverse_r <- as.matrix(fread(file=paste0(runPath,"/traverse/rna_traverse_dim",i,".csv"),
+                                sep=",",header=TRUE,drop="V1"))
+  cor <- apply(traverse_r,2,function(x) CorTest(traverse[,1], x, alpha=1e-12)) #Threshold set by alpha
+  
+  #UP
+  order <- order(cor,decreasing=TRUE)
+  tmp_cor <- sort(cor,decreasing=TRUE)
+  cor_up_g[[i]] <- tmp_cor
+  tmp_gene <- gene[order]
+  gene_up[[i]] <- tmp_gene
+  
+  #DOWN
+  order <- order(cor,decreasing=FALSE)
+  tmp_cor <- sort(cor,decreasing=FALSE)
+  cor_down_g[[i]] <- tmp_cor
+  tmp_gene <- gene[order]
+  gene_down[[i]] <- tmp_gene
+}
+
+#Plot genes associated with each dimension.
+gg_assocgene <- AssociatedGene(dimension=1)
+gg_assocgene
+
+
+#Protein
+protein <- as.matrix(fread(file=paste0(data_path, "/CITE-seq/protein.tsv"),
+                           header=FALSE,sep="\t"))[,1]
+cor_up_p <- cor_down_p <- protein_up <- protein_down <- list()
+for(i in 1:latent_dim){
+  traverse <- as.matrix(fread(file=paste0(runPath,"/traverse/traverse_dim",i,".csv"),
+                              sep=",",header=TRUE,drop="V1"))
+  traverse_p <- as.matrix(fread(file=paste0(runPath,"/traverse/protein_traverse_dim",i,".csv"),
+                                sep=",",header=TRUE,drop="V1"))
+  cor <- apply(traverse_p,2,function(x) CorTest(traverse[,1], x, alpha=1e-2))
+  
+  #UP
+  order <- order(cor,decreasing=TRUE)
+  tmp_cor <- sort(cor,decreasing=TRUE)
+  cor_up_p[[i]] <- tmp_cor
+  tmp_protein <- protein[order]
+  protein_up[[i]] <- tmp_protein
+  
+  #Down
+  order <- order(cor,decreasing=FALSE)
+  tmp_cor <- sort(cor,decreasing=FALSE)
+  cor_down_p[[i]] <- tmp_cor
+  tmp_protein <- protein[order]
+  protein_down[[i]] <- tmp_protein
+}
+
+#Plot protein associated with each latent dimension.
+gg_assocprotein <- AssociatedProtein(dimension=1)
+gg_assocprotein
+
+
+
+#Cross-modal generation of test data
+data <- Matrix::readMM(paste0(data_path, "/CITE-seq/Protein_count.mtx"))
+t_id <- as.vector(as.matrix(fread(file=paste0(runPath,"/t_id.csv"),
+                                  sep=",",header=TRUE,drop="V1"))) + 1 #train data index
+s_id <- as.vector(as.matrix(fread(file=paste0(runPath,"/s_id.csv"),
+                                  sep=",",header=TRUE,drop="V1"))) + 1 #test data index
+protein <- as.matrix(fread(file=paste0(data_path, "/CITE-seq/protein.tsv"),
+                           header=FALSE,sep="\t"))[,1]
+barcode <- as.matrix(fread(file=paste0(data_path, "/CITE-seq/barcode.tsv"),
+                           header=FALSE,sep="\t"))[,1]
+rownames(data) <- protein
+colnames(data) <- barcode
+data_s <- data[,s_id]
+
+#Get cluster assignment for test data.
+cluster_s <- cluster[(length(t_id)+1):length(cluster)]
+
+#Obtain pseudobulk data by aggregating per cluster.
+agg <- CreateAgg(t(data_s), cluster_s)
+rownames(agg) <- as.character(c(1:max(cluster)))
+colnames(agg) <- protein
+
+#Obtain pseudobulk data from cross-modal generation
+recon <- Matrix::readMM(paste0(runPath,"/pred_test_r_p.mtx"))
+recon_agg <- CreateAgg(recon, cluster_s)
+rownames(recon_agg) <- as.character(c(1:max(cluster)))
+colnames(recon_agg) <- protein
+
+#Apply hclust on protein
+scale <- apply(agg,2,scale)
+protein_dist <- dist(t(scale))
+h_protein <- hclust(protein_dist)
+
+breaks <- seq(-3,3,by=0.01)
+color <- colorRampPalette(rev(brewer.pal(n=7 , name="RdYlBu")))(length(breaks))
+
+p1 <- pheatmap(t(agg), breaks=breaks, color=color, scale="row",
+                        legend_breaks=c(-3,0,3), legend_labels=c("-3","0","3"),
+                        cluster_rows=h_protein, cluster_cols=FALSE, main="Original")
+p2 <- pheatmap(t(recon_agg), breaks=breaks, color=color, scale="row",
+                        legend_breaks=c(-3,0,3), legend_labels=c("-3","0","3"),
+                        cluster_rows=h_protein, cluster_cols=FALSE, main="Cross-modal generation")
+
+gridExtra::grid.arrange(p1[[4]], p2[[4]], nrow=1)
+
