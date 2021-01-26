@@ -2,7 +2,7 @@
 
 
 `colab_tutorial.ipynb` shows how to run scMM using GPU on Google Colab.
-For the tutorial, we use CITE-seq (single-cell transctiptome & surface protein) data for bone marrow mononuclear cell (BMNC) including randomely subsampled 15,000 cells ([Stuart and Butler et. al., 2018](https://www.cell.com/cell/fulltext/S0092-8674(19)30559-8#%20)). 
+For the tutorial, we use toy data generated from CITE-seq (single-cell transctiptome & surface protein) data for bone marrow mononuclear cell (BMNC) including randomely subsampled 15,000 cells ([Stuart and Butler et. al., 2018](https://www.cell.com/cell/fulltext/S0092-8674(19)30559-8#%20)). Most varaible 5000 genes were selected for transcriptiome.
 
 RNA and protein count matrix should be stored in folder named `RNA-seq` and `CITE-seq` accomapnied with feature information stored in `gene.tsv` and `protein.tsv`, respectively. Also, single-cell barcode stored in `barcode.tsv` should be included. When running on chromatin accessibility data, name folder as `ATAC-seq` and feature file as `peak.tsv`. For example, folder structure looks like:
 ```
