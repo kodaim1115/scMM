@@ -20,5 +20,5 @@ data/BMNC
 Tutorial on downstream analysisfor scMM outputs can be found at `R/tutorial.R`. 
 Vignette is available [here](http://htmlpreview.github.io/?https://github.com/kodaim1115/test/blob/master/tutorial.html).
 
-Codes were adopted from the [original MMVAE repository](https://github.com/iffsid/mmvae). 
+Codes were adopted from the [MMVAE repository](https://github.com/iffsid/mmvae). 
 
