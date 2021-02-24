@@ -24,4 +24,4 @@ Codes were adopted from the [MMVAE repository](https://github.com/iffsid/mmvae).
 
 Check out our [preprint](https://www.biorxiv.org/content/10.1101/2021.02.18.431907v1.full) for more details on the methods. 
 
-![figure](/fig1.pdf)
+![figure](https://github.com/kodaim1115/scMM/blob/master/fig1.pdf)
