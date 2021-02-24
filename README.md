@@ -1,5 +1,7 @@
 # scMM: Mixture-of-experts multimodal deep generative model for single-cell multiomics analysis
 
+![figure](https://github.com/kodaim1115/scMM/blob/master/overview.png)
+
 scMM is a novel deep generative model-based framework for the extraction of interpretable joint representations and cross-modal generation for single-cell multiomics data (e.g. transcriptome & chromatin accessibility, transcriptome & surface proteins). It is based on a mixture-of-experts multimodal deep generative model and achieves end-to-end learning by modeling raw count data in each modality based on different probability distributions.
 
 `colab_tutorial.ipynb` shows how to run scMM using GPU on Google Colab.
@@ -24,4 +26,4 @@ Codes were adopted from the [MMVAE repository](https://github.com/iffsid/mmvae).
 
 Check out our [preprint](https://www.biorxiv.org/content/10.1101/2021.02.18.431907v1.full) for more details on the methods. 
 
-![figure](https://github.com/kodaim1115/scMM/blob/master/overview.png)
+
